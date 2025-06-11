@@ -7,7 +7,6 @@ A Rust-based CLI tool that mimics the functionality of the classic Unix `grep` c
 
 - 🔍 **Fast** text pattern matching
 - 📁 **Recursive** directory scanning
-- 🧠 **Regex** support (optional)
 - 🆎 **Case-insensitive** matching
 - ⚙️ Simple and clean **CLI interface**
 - 🦀 Written in safe and modern **Rust**
@@ -25,3 +24,4 @@ A Rust-based CLI tool that mimics the functionality of the classic Unix `grep` c
 git clone https://github.com/yourusername/clone_grep.git
 cd clone_grep
 cargo run -- "pattern" path/to/file_or_directory
+IGNORE_CASE=1 cargo run -- "pattern" path/to/file_or_directory
