@@ -1,60 +1,101 @@
-use std::{error::Error, fs, env};
+use std::{
+    error::Error,
+    fs::{self, File},
+    io::{self, BufRead},
+    path::Path
+};
+use clap::Parser;
 
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
 pub struct Config {
     pub query: String,
     pub file_path: String,
-    pub case_sensitive: bool,
-}
 
-impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("not enough arguments");
-        }
+    #[arg(short = 'r', long, default_value_t = false)]
+    pub directory: bool,
 
-        let query = args[1].clone();
-        let file_path = args[2].clone();
-
-        let case_sensitive = env::var("IGNORE_CASE").is_err();
-
-        Ok(Config {
-            query,
-            file_path,
-            case_sensitive,
-        })
-    }
+    #[arg(short = 'i', long, default_value_t = false)]
+    pub case_insensitive: bool,
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(config.file_path)?;
 
-    let results = if config.case_sensitive {
-        search(&config.query, &contents)
+    if !config.directory {
+        let contents = fs::read_to_string(config.file_path)?;
+
+        if config.case_insensitive {
+            search_case_insensitive(&config.query, &contents);
+        } else {
+            search(&config.query, &contents);
+        }
     } else {
-        search_case_insensitive(&config.query, &contents)
-    };
+        let dir_str = config.file_path;
+        let dir = Path::new(&dir_str);
 
-
-    for line in &results {
-        println!("{line}");
+        let _ = visit_dirs(config.query.as_str(), dir, config.case_insensitive);
     }
-
-    println!("\n{}", &results.len());
 
     Ok(())
 }
 
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    contents
-        .lines()
-        .filter(|line| line.contains(query))
-        .collect()
+pub fn search(query: &str, contents: &str) {
+    let mut count = 0;
+
+    for line in contents.lines() {
+        if line.contains(query) {
+            println!("{}", line);
+            count += 1;
+        }
+    }
+
+    println!("\nFound {} in {} lines.", query, count);
 }
 
-pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+pub fn search_case_insensitive(query: &str, contents: &str) {
     let query = query.to_lowercase();
-    contents
-        .lines()
-        .filter(|line| line.to_lowercase().contains(&query))
-        .collect()
+    let mut count = 0;
+
+    for line in contents.lines() {
+        if line.to_lowercase().contains(&query) {
+            println!("{}", line);
+            count += 1;
+        }
+    }
+
+    println!("\nFound {} in {} lines.", query, count);
+}
+
+pub fn visit_dirs(query: &str, dir: &Path, case_insesitive: bool) -> io::Result<()> {
+    if dir.is_dir() {
+        for file in dir.read_dir()? {
+            let file = file?;
+            let path = file.path();
+
+            if path.is_dir() {
+                visit_dirs(query, &path, case_insesitive)?;
+            } else if path.is_file() {
+                println!("Opeaning file: {:?}",path);
+
+                let file = File::open(&path)?;
+                let reader = io::BufReader::new(file);
+
+
+                for line in reader.lines() {
+                    let line = line?;
+                    if case_insesitive {
+                        if line.to_lowercase().contains(query) {
+                            println!("{}", line);
+                        }
+                    } else {
+                        if line.contains(query) {
+                            println!("{}", line);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
