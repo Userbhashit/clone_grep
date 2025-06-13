@@ -24,5 +24,7 @@ Cargo.lock
 *.swp
 *.bak
 
-# Backup files
-*~
+# test files
+output.txt
+grep_rs/folder_1/**
+grep_rs/folder_2/**
